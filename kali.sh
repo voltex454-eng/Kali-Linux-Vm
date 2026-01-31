@@ -1,5 +1,5 @@
 #!/bin/bash
-# Kali Linux Colorful + 100GB + English Warnings
+# Kali Linux: AUTO-HUNTER (No more 404s) + Colorful + 100GB
 
 # Colors
 RED='\033[1;31m'
@@ -9,34 +9,46 @@ BLUE='\033[1;34m'
 CYAN='\033[1;36m'
 NC='\033[0m'
 
-# Link (Weekly Live - Always Latest)
-ISO_LINK="https://cdimage.kali.org/kali-2025.4/kali-linux-2025.4-installer-netinst-amd64.iso"
 ISO_NAME="kali-linux.iso"
 DISK_NAME="kali_storage.qcow2"
+BASE_URL="https://cdimage.kali.org/kali-weekly/"
 
 clear
 echo -e "${CYAN}------------------------------------------------${NC}"
-echo -e "${CYAN}   🚀 KALI LINUX: ULTIMATE COLORFUL EDITION     ${NC}"
+echo -e "${CYAN}   🚀 KALI LINUX: AUTO-HUNTER EDITION           ${NC}"
 echo -e "${CYAN}------------------------------------------------${NC}"
 
 # 1. Install Tools
-echo -e "${YELLOW}[1/6] Installing Essential Tools...${NC}"
+echo -e "${YELLOW}[1/7] Installing Essential Tools...${NC}"
 sudo apt-get update -y > /dev/null 2>&1
-sudo apt-get install -y qemu-system-x86 qemu-utils python3-numpy git wget ssh > /dev/null 2>&1
+sudo apt-get install -y qemu-system-x86 qemu-utils python3-numpy git wget ssh curl > /dev/null 2>&1
 
 # 2. Setup VNC
 if [ ! -d "novnc" ]; then
-    echo -e "${YELLOW}[2/6] Configuring VNC Viewer...${NC}"
+    echo -e "${YELLOW}[2/7] Configuring VNC Viewer...${NC}"
     git clone --depth 1 https://github.com/novnc/noVNC.git novnc > /dev/null 2>&1
     git clone --depth 1 https://github.com/novnc/websockify novnc/utils/websockify > /dev/null 2>&1
 fi
 
-# 3. Download ISO
+# 3. AUTO-DETECT & DOWNLOAD ISO
 if [ ! -f "$ISO_NAME" ]; then
-    echo -e "${BLUE}[3/6] Downloading Latest Kali Linux...${NC}"
+    echo -e "${BLUE}[3/7] Hunting for Latest Live Version...${NC}"
+    
+    # Magic Command: Server se file ka naam khud dhoondta hai
+    LATEST_FILE=$(curl -sL "$BASE_URL" | grep -o 'kali-linux-.*-live-amd64.iso' | head -n 1 | sort -V | tail -n 1)
+    
+    if [ -z "$LATEST_FILE" ]; then
+        echo -e "${RED}⚠️ Could not auto-detect weekly version. Switching to Stable...${NC}"
+        ISO_LINK="https://cdimage.kali.org/current/kali-linux-2024.4-live-amd64.iso"
+    else
+        ISO_LINK="${BASE_URL}${LATEST_FILE}"
+        echo -e "${GREEN}✅ Found Latest Version: $LATEST_FILE ${NC}"
+    fi
+
+    echo -e "${BLUE}[4/7] Downloading: $ISO_LINK ...${NC}"
     wget -q --show-progress -O "$ISO_NAME" "$ISO_LINK"
 else
-    echo -e "${GREEN}[3/6] ISO found. Skipping download.${NC}"
+    echo -e "${GREEN}[3/7] ISO found. Skipping download.${NC}"
 fi
 
 # 4. Create Disk
@@ -46,7 +58,7 @@ if [ ! -f "$DISK_NAME" ]; then
 fi
 
 # 5. Start VM
-echo -e "${YELLOW}[4/6] Booting Virtual Machine...${NC}"
+echo -e "${YELLOW}[5/7] Booting Virtual Machine...${NC}"
 qemu-system-x86_64 \
   -m 4G \
   -smp 2 \
@@ -58,7 +70,7 @@ qemu-system-x86_64 \
   -daemonize
 
 # 6. Public URL
-echo -e "${YELLOW}[5/6] Generating Secure Link...${NC}"
+echo -e "${YELLOW}[6/7] Generating Secure Link...${NC}"
 ./novnc/utils/novnc_proxy --vnc localhost:5900 --listen 6080 > /dev/null 2>&1 &
 rm -f tunnel.log
 nohup ssh -q -p 443 -R0:localhost:6080 -L4300:localhost:4300 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 free.pinggy.io > tunnel.log 2>&1 &
@@ -81,5 +93,4 @@ echo -e "${YELLOW} 🔄 TRICK: Run the script again to generate a new URL.${NC}"
 echo -e "${RED} 🛑 Stop Machine: Press Ctrl + C ${NC}"
 echo -e "${RED}========================================================${NC}"
 
-# Keep Running
 while kill -0 $SSH_PID 2>/dev/null; do sleep 5; done
