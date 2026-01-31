@@ -2,7 +2,7 @@
 # Kali Linux GUI + 100GB Storage + Clean Progress Bar
 
 ISO_LINK="https://cdimage.kali.org/kali-2025.4/kali-linux-2025.4-installer-amd64.iso"
-ISO_NAME="kali-linux.iso"
+ISO_NAME="linux-2025.4-installer-amd64.iso"
 DISK_NAME="kali_storage.qcow2"
 
 clear
