@@ -1,5 +1,6 @@
 #!/bin/bash
-# Kali Linux: AUTO-HUNTER (No more 404s) + Colorful + 100GB
+# Kali Linux: 2026 LATEST AUTO-DETECT + Colorful + 100GB
+# Features: Automatically finds the correct Weekly Live ISO
 
 # Colors
 RED='\033[1;31m'
@@ -11,12 +12,22 @@ NC='\033[0m'
 
 ISO_NAME="kali-linux.iso"
 DISK_NAME="kali_storage.qcow2"
+# Official Weekly Directory
 BASE_URL="https://cdimage.kali.org/kali-weekly/"
 
 clear
 echo -e "${CYAN}------------------------------------------------${NC}"
-echo -e "${CYAN}   🚀 KALI LINUX: AUTO-HUNTER EDITION           ${NC}"
+echo -e "${CYAN}   🚀 KALI LINUX: 2026 LATEST HUNTER            ${NC}"
 echo -e "${CYAN}------------------------------------------------${NC}"
+
+# 0. CLEANUP (Auto-fix bad downloads)
+if [ -f "$ISO_NAME" ]; then
+    FILE_SIZE=$(stat -c%s "$ISO_NAME")
+    if [ "$FILE_SIZE" -lt 100000000 ]; then
+        echo -e "${RED}🗑️  Cleaning up corrupted file...${NC}"
+        rm -f "$ISO_NAME"
+    fi
+fi
 
 # 1. Install Tools
 echo -e "${YELLOW}[1/7] Installing Essential Tools...${NC}"
@@ -30,22 +41,24 @@ if [ ! -d "novnc" ]; then
     git clone --depth 1 https://github.com/novnc/websockify novnc/utils/websockify > /dev/null 2>&1
 fi
 
-# 3. AUTO-DETECT & DOWNLOAD ISO
+# 3. SMART DOWNLOAD (The Logic)
 if [ ! -f "$ISO_NAME" ]; then
-    echo -e "${BLUE}[3/7] Hunting for Latest Live Version...${NC}"
+    echo -e "${BLUE}[3/7] Searching Server for Latest 2026 Live ISO...${NC}"
     
-    # Magic Command: Server se file ka naam khud dhoondta hai
-    LATEST_FILE=$(curl -sL "$BASE_URL" | grep -o 'kali-linux-.*-live-amd64.iso' | head -n 1 | sort -V | tail -n 1)
+    # 1. Server se list nikalo
+    # 2. 'live-amd64.iso' dhoondo (Installer ignore karo)
+    # 3. Sort karke sabse latest wala select karo
+    LATEST_FILE=$(curl -sL "$BASE_URL" | grep -o 'kali-linux-[0-9]\{4\}-W[0-9]\{2\}-live-amd64.iso' | sort -V | tail -n 1)
     
     if [ -z "$LATEST_FILE" ]; then
-        echo -e "${RED}⚠️ Could not auto-detect weekly version. Switching to Stable...${NC}"
-        ISO_LINK="https://cdimage.kali.org/current/kali-linux-2024.4-live-amd64.iso"
+        echo -e "${RED}⚠️  Auto-detect failed. Using fallback rolling...${NC}"
+        ISO_LINK="https://cdimage.kali.org/current/kali-linux-rolling-live-amd64.iso"
     else
+        echo -e "${GREEN}✅ FOUND LATEST VERSION: $LATEST_FILE ${NC}"
         ISO_LINK="${BASE_URL}${LATEST_FILE}"
-        echo -e "${GREEN}✅ Found Latest Version: $LATEST_FILE ${NC}"
     fi
 
-    echo -e "${BLUE}[4/7] Downloading: $ISO_LINK ...${NC}"
+    echo -e "${BLUE}[4/7] Downloading: $LATEST_FILE ...${NC}"
     wget -q --show-progress -O "$ISO_NAME" "$ISO_LINK"
 else
     echo -e "${GREEN}[3/7] ISO found. Skipping download.${NC}"
@@ -58,7 +71,7 @@ if [ ! -f "$DISK_NAME" ]; then
 fi
 
 # 5. Start VM
-echo -e "${YELLOW}[5/7] Booting Virtual Machine...${NC}"
+echo -e "${YELLOW}[5/7] Booting Latest Kali...${NC}"
 qemu-system-x86_64 \
   -m 4G \
   -smp 2 \
@@ -82,7 +95,7 @@ PUBLIC_URL=$(grep -o "https://[^ ]*.pinggy.link" tunnel.log | head -n 1)
 # --- FINAL COLORFUL SCREEN ---
 clear
 echo -e "${GREEN}========================================================${NC}"
-echo -e "${GREEN}      ✅  KALI LINUX IS LIVE & READY!  ${NC}"
+echo -e "${GREEN}      ✅  KALI LINUX (LATEST) IS LIVE!  ${NC}"
 echo -e "${GREEN}========================================================${NC}"
 echo ""
 echo -e "${CYAN} 🔗 ACCESS URL:  $PUBLIC_URL ${NC}"
@@ -93,4 +106,5 @@ echo -e "${YELLOW} 🔄 TRICK: Run the script again to generate a new URL.${NC}"
 echo -e "${RED} 🛑 Stop Machine: Press Ctrl + C ${NC}"
 echo -e "${RED}========================================================${NC}"
 
+# Keep Running
 while kill -0 $SSH_PID 2>/dev/null; do sleep 5; done
