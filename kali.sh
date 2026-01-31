@@ -10,7 +10,7 @@ CYAN='\033[1;36m'
 NC='\033[0m'
 
 # Link (Weekly Live - Always Latest)
-ISO_LINK="https://cdimage.kali.org/kali-weekly/kali-linux-2026-W05-installer-amd64.iso"
+ISO_LINK="https://cdimage.kali.org/kali-2025.4/kali-linux-2025.4-installer-netinst-amd64.iso"
 ISO_NAME="kali-linux.iso"
 DISK_NAME="kali_storage.qcow2"
 
