@@ -1,5 +1,5 @@
 #!/bin/bash
-# Kali Linux 2026 Fix: Auto-Kill + Latest Rolling Version
+# Kali Linux: FINAL REPAIR (Auto-Kill + Rolling Latest)
 
 # Colors
 RED='\033[1;31m'
@@ -9,18 +9,18 @@ BLUE='\033[1;34m'
 CYAN='\033[1;36m'
 NC='\033[0m'
 
-# --- STEP 0: KILL OLD PROCESSES (Fixes "Write Lock" Error) ---
-echo -e "${RED}[!] Checking for zombie processes...${NC}"
+# --- STEP 0: KILL GHOST PROCESSES (Ye Lock Error Fix Karega) ---
+echo -e "${RED}[!] Checking for old background processes...${NC}"
 pkill -f qemu-system-x86_64 > /dev/null 2>&1
 killall qemu-system-x86_64 > /dev/null 2>&1
 sleep 2
-echo -e "${GREEN}[✓] Old machines killed. Disk is now free.${NC}"
+echo -e "${GREEN}[✓] System Cleaned. Disk Unlocked.${NC}"
 # -------------------------------------------------------------
 
 ISO_NAME="kali-linux.iso"
 DISK_NAME="kali_storage.qcow2"
 
-# OFFICIAL ROLLING RELEASE (Ye Hamesha Latest 2025-2026 hoti hai aur link kabhi fail nahi hota)
+# OFFICIAL ROLLING LINK (Always Latest, Never Fails)
 ISO_LINK="https://cdimage.kali.org/kali-images/kali-rolling/kali-linux-rolling-live-amd64.iso"
 
 clear
@@ -40,18 +40,19 @@ if [ ! -d "novnc" ]; then
     git clone --depth 1 https://github.com/novnc/websockify novnc/utils/websockify > /dev/null 2>&1
 fi
 
-# 3. Download ISO (Rolling = Always Latest)
+# 3. Download ISO (Clean & Safe)
 if [ ! -f "$ISO_NAME" ]; then
     echo -e "${BLUE}[3/6] Downloading Latest Rolling Release...${NC}"
     wget -q --show-progress -O "$ISO_NAME" "$ISO_LINK"
 else
-    echo -e "${GREEN}[3/6] ISO found. Checking file size...${NC}"
-    # Check if file is corrupt (less than 1GB)
+    # Check if file is broken/empty (Previous error fix)
     FILE_SIZE=$(stat -c%s "$ISO_NAME")
-    if [ "$FILE_SIZE" -lt 1000000000 ]; then
-         echo -e "${RED}⚠️ File too small/corrupt. Re-downloading...${NC}"
-         rm -f "$ISO_NAME"
-         wget -q --show-progress -O "$ISO_NAME" "$ISO_LINK"
+    if [ "$FILE_SIZE" -lt 100000000 ]; then
+        echo -e "${RED}⚠️ Found broken file. Re-downloading...${NC}"
+        rm -f "$ISO_NAME"
+        wget -q --show-progress -O "$ISO_NAME" "$ISO_LINK"
+    else
+        echo -e "${GREEN}[3/6] ISO found. Skipping download.${NC}"
     fi
 fi
 
