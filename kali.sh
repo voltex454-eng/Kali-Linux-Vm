@@ -1,5 +1,5 @@
 #!/bin/bash
-# Kali Linux GUI + Clean Progress Bar
+# Kali Linux GUI + 100GB Storage + Clean Progress Bar
 
 ISO_LINK="https://old.kali.org/kali-images/kali-2023.3/kali-linux-2023.3-live-amd64.iso"
 ISO_NAME="kali-linux.iso"
@@ -8,7 +8,7 @@ DISK_NAME="kali_storage.qcow2"
 clear
 
 echo "------------------------------------------------"
-echo "   Kali Linux: Cloud PC (Starting Up...)        "
+echo "   Kali Linux: Cloud PC (100GB Storage Mode)    "
 echo "------------------------------------------------"
 
 # 1. Install Tools (Silent)
@@ -26,16 +26,16 @@ fi
 # 3. Download ISO (Clean Bar Mode)
 if [ ! -f "$ISO_NAME" ]; then
     echo "[3/6] Downloading Kali Linux ISO..."
-    # Yahan magic change kiya hai: -q (quiet) + --show-progress (sirf bar dikhao)
     wget -q --show-progress -O "$ISO_NAME" "$ISO_LINK"
 else
     echo "[3/6] ISO found. Skipping download."
 fi
 
-# 4. Create Disk
+# 4. Create Disk (UPDATED: 100GB)
 if [ ! -f "$DISK_NAME" ]; then
-    echo "[*] Creating Storage Disk (20GB)..."
-    qemu-img create -f qcow2 "$DISK_NAME" 20G > /dev/null
+    echo "[*] Creating Storage Disk (100GB)..."
+    # Yahan change kiya hai: 20G -> 100G
+    qemu-img create -f qcow2 "$DISK_NAME" 100G > /dev/null
 fi
 
 # 5. Start VM
@@ -75,7 +75,7 @@ PUBLIC_URL=$(grep -o "https://[^ ]*.pinggy.link" tunnel.log | head -n 1)
 # --- FINAL CLEAN SCREEN ---
 clear
 echo "========================================================"
-echo "      ✅  KALI LINUX IS LIVE & RUNNING! "
+echo "      ✅  KALI LINUX STARTED (100GB DISK)! "
 echo "========================================================"
 echo ""
 echo " 🔗 ACCESS URL:  $PUBLIC_URL"
