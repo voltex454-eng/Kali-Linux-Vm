@@ -1,79 +1,45 @@
 #!/bin/bash
-# Kali Linux: FINAL DIAGNOSTIC MODE (Internet & Download Fix)
+# Kali Linux GUI + 100GB Storage + Clean Progress Bar
 
-# Colors
-RED='\033[1;31m'
-GREEN='\033[1;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[1;34m'
-CYAN='\033[1;36m'
-NC='\033[0m'
-
+ISO_LINK="https://cdimage.kali.org/kali-2025.4/kali-linux-2025.4-installer-amd64.iso"
 ISO_NAME="kali-linux.iso"
 DISK_NAME="kali_storage.qcow2"
-ISO_LINK="https://cdimage.kali.org/kali-images/kali-rolling/kali-linux-rolling-live-amd64.iso"
 
 clear
-echo -e "${CYAN}------------------------------------------------${NC}"
-echo -e "${CYAN}   🚀 KALI LINUX: DIAGNOSTIC MODE               ${NC}"
-echo -e "${CYAN}------------------------------------------------${NC}"
 
-# 0. KILL OLD PROCESSES
-echo -e "${RED}[!] Killing old background processes...${NC}"
-pkill -f qemu-system-x86_64 > /dev/null 2>&1
-killall qemu-system-x86_64 > /dev/null 2>&1
-sleep 2
+echo "------------------------------------------------"
+echo "   Kali Linux: Cloud PC (100GB Storage Mode)    "
+echo "------------------------------------------------"
 
-# 1. FORCE DELETE OLD ISO (Start Fresh)
-echo -e "${RED}[!] Deleting old corrupt files...${NC}"
-rm -f "$ISO_NAME"
-
-# 2. CHECK INTERNET
-echo -e "${YELLOW}[1/7] Checking Internet Connection...${NC}"
-if ! ping -c 3 google.com > /dev/null 2>&1; then
-    echo -e "${RED}❌ ERROR: No Internet! Please Restart your Codespace.${NC}"
-    exit 1
-fi
-echo -e "${GREEN}✅ Internet is working.${NC}"
-
-# 3. INSTALL TOOLS
-echo -e "${YELLOW}[2/7] Installing Tools...${NC}"
+# 1. Install Tools (Silent)
+echo "[1/6] Installing Essential Tools..."
 sudo apt-get update -y > /dev/null 2>&1
 sudo apt-get install -y qemu-system-x86 qemu-utils python3-numpy git wget ssh > /dev/null 2>&1
 
-# 4. DOWNLOAD WITH ERROR CHECKING
-echo -e "${BLUE}[3/7] Downloading Kali Rolling (This takes time)...${NC}"
-wget --show-progress -O "$ISO_NAME" "$ISO_LINK"
-
-# Check if download succeeded
-if [ $? -ne 0 ]; then
-    echo -e "${RED}❌ ERROR: Download Failed! Link might be blocked or busy.${NC}"
-    exit 1
-fi
-
-# 5. VERIFY FILE SIZE
-FILE_SIZE=$(stat -c%s "$ISO_NAME")
-if [ "$FILE_SIZE" -lt 2000000000 ]; then
-    echo -e "${RED}❌ ERROR: File too small ($FILE_SIZE bytes). Download corrupted.${NC}"
-    exit 1
-fi
-echo -e "${GREEN}✅ Download Verified! Size looks good.${NC}"
-
-# 6. SETUP VNC
+# 2. Setup VNC (Silent)
 if [ ! -d "novnc" ]; then
-    echo -e "${YELLOW}[4/7] Setting up VNC...${NC}"
+    echo "[2/6] Configuring VNC Viewer..."
     git clone --depth 1 https://github.com/novnc/noVNC.git novnc > /dev/null 2>&1
     git clone --depth 1 https://github.com/novnc/websockify novnc/utils/websockify > /dev/null 2>&1
 fi
 
-# 7. CREATE DISK
+# 3. Download ISO (Clean Bar Mode)
+if [ ! -f "$ISO_NAME" ]; then
+    echo "[3/6] Downloading Kali Linux ISO..."
+    wget -q --show-progress -O "$ISO_NAME" "$ISO_LINK"
+else
+    echo "[3/6] ISO found. Skipping download."
+fi
+
+# 4. Create Disk (UPDATED: 100GB)
 if [ ! -f "$DISK_NAME" ]; then
-    echo -e "${BLUE}[5/7] Creating 100GB Disk...${NC}"
+    echo "[*] Creating Storage Disk (100GB)..."
+    # Yahan change kiya hai: 20G -> 100G
     qemu-img create -f qcow2 "$DISK_NAME" 100G > /dev/null
 fi
 
-# 8. START VM
-echo -e "${YELLOW}[6/7] Booting Machine...${NC}"
+# 5. Start VM
+echo "[4/6] Booting Virtual Machine..."
 qemu-system-x86_64 \
   -m 4G \
   -smp 2 \
@@ -84,26 +50,42 @@ qemu-system-x86_64 \
   -net nic,model=virtio -net user \
   -daemonize
 
-# 9. GENERATE URL
-echo -e "${YELLOW}[7/7] Generating Link...${NC}"
+# Start noVNC
+echo "[5/6] Starting Display Server..."
 ./novnc/utils/novnc_proxy --vnc localhost:5900 --listen 6080 > /dev/null 2>&1 &
+
+# 6. Public URL (Clean Output)
+echo "[6/6] Generating Public Link (Please Wait)..."
+
 rm -f tunnel.log
+
+# SSH Tunnel (Logs Hidden)
 nohup ssh -q -p 443 -R0:localhost:6080 -L4300:localhost:4300 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 free.pinggy.io > tunnel.log 2>&1 &
 
 SSH_PID=$!
-while ! grep -q "https://" tunnel.log; do sleep 1; done
+
+# Wait for URL
+while ! grep -q "https://" tunnel.log; do
+    sleep 1
+done
+
+# URL Extract
 PUBLIC_URL=$(grep -o "https://[^ ]*.pinggy.link" tunnel.log | head -n 1)
 
-# --- SUCCESS ---
+# --- FINAL CLEAN SCREEN ---
 clear
-echo -e "${GREEN}========================================================${NC}"
-echo -e "${GREEN}      ✅  KALI LINUX STARTED SUCCESSFULLY!  ${NC}"
-echo -e "${GREEN}========================================================${NC}"
+echo "========================================================"
+echo "      ✅  KALI LINUX STARTED (100GB DISK)! "
+echo "========================================================"
 echo ""
-echo -e "${CYAN} 🔗 URL:  $PUBLIC_URL ${NC}"
+echo " 🔗 ACCESS URL:  $PUBLIC_URL"
 echo ""
-echo -e "${RED}========================================================${NC}"
-echo -e "${YELLOW} ⏳ Note: Wait 1 minute inside the browser for it to load.${NC}"
-echo -e "${RED}========================================================${NC}"
+echo "========================================================"
+echo " ⏳ URL Expires in: 60 Minutes"
+echo " 🛑 Stop Machine: Press Ctrl + C"
+echo "========================================================"
 
-while kill -0 $SSH_PID 2>/dev/null; do sleep 5; done
+# Silent Loop
+while kill -0 $SSH_PID 2>/dev/null; do
+    sleep 5
+done
