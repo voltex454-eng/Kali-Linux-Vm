@@ -6,8 +6,8 @@ ORANGE='\033[1;33m'
 GRAY='\033[1;90m'
 NC='\033[0m' # No Color
 
-ISO_LINK="https://cdimage.kali.org/kali-2025.4/kali-linux-2025.4-installer-amd64.iso"
-ISO_NAME="linux-2025.4-installer-amd64.iso"
+ISO_LINK="https://archive.kali.org/kali-images/kali-2025.3/kali-linux-2025.3-live-amd64.iso"
+ISO_NAME="kali-linux-2025.3-live-amd64.iso"
 DISK_NAME="kali_storage.qcow2"
 
 clear
