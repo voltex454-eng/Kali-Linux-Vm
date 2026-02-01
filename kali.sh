@@ -1,150 +1,92 @@
 #!/bin/bash
-# KALI LINUX ADVANCED (ANTI-CRASH EDITION)
-# RAM: 2GB (Safe for Codespace) | Mouse: Trackpad Style
+# Kali Linux: 2025.3 LIVE (Trackpad Mode + Anti-Glitch Mouse)
+# Mouse: USB Mouse (Relative Movement - No Jumping, No Stuck Clicks)
 
 # --- COLORS ---
 ORANGE='\033[1;33m'
 GRAY='\033[1;90m'
-GREEN='\033[1;32m'
-RED='\033[1;31m'
 NC='\033[0m'
 
-# --- CONFIGURATION ---
 ISO_LINK="https://archive.kali.org/kali-images/kali-2025.3/kali-linux-2025.3-live-amd64.iso"
 ISO_NAME="kali-linux-2025.3-live-amd64.iso"
 DISK_NAME="kali_storage.qcow2"
 
-# --- FUNCTIONS ---
+clear
+echo -e "${GRAY}------------------------------------------------${NC}"
+echo -e "${ORANGE}   Kali Linux: 2025.3 LIVE (Anti-Glitch Mouse)  ${NC}"
+echo -e "${GRAY}------------------------------------------------${NC}"
 
-function header() {
-    clear
-    echo -e "${GRAY}------------------------------------------------${NC}"
-    echo -e "${ORANGE}   🚀 KALI LINUX: SAFE MODE (2GB RAM)       ${NC}"
-    echo -e "${GRAY}------------------------------------------------${NC}"
-}
+# 1. Install Tools
+echo -e "${ORANGE}[1/6]${GRAY} Installing Essential Tools...${NC}"
+sudo apt-get update -y > /dev/null 2>&1
+sudo apt-get install -y qemu-system-x86 qemu-utils python3-numpy git wget ssh > /dev/null 2>&1
 
-function stop_vm() {
-    echo -e "${ORANGE}[*]${GRAY} Stopping VM...${NC}"
-    pkill -f qemu-system-x86_64 > /dev/null 2>&1
-    killall qemu-system-x86_64 > /dev/null 2>&1
-    pkill -f websockify > /dev/null 2>&1
-    pkill -f ssh > /dev/null 2>&1
-    rm -f tunnel.log
-    sleep 2
-    echo -e "${GREEN}[✓] VM Stopped.${NC}"
-}
+# 2. Setup VNC
+if [ ! -d "novnc" ]; then
+    echo -e "${ORANGE}[2/6]${GRAY} Configuring VNC Viewer...${NC}"
+    git clone --depth 1 https://github.com/novnc/noVNC.git novnc > /dev/null 2>&1
+    git clone --depth 1 https://github.com/novnc/websockify novnc/utils/websockify > /dev/null 2>&1
+fi
 
-function create_vm() {
-    header
-    echo -e "${ORANGE}[1/4]${GRAY} Installing Tools...${NC}"
-    sudo apt-get update -y > /dev/null 2>&1
-    sudo apt-get install -y qemu-system-x86 qemu-utils python3-numpy git wget ssh > /dev/null 2>&1
+# 3. Download ISO
+if [ ! -f "$ISO_NAME" ]; then
+    echo -e "${ORANGE}[3/6]${GRAY} Downloading Kali Linux ISO...${NC}"
+    wget -q --show-progress -O "$ISO_NAME" "$ISO_LINK"
+else
+    echo -e "${ORANGE}[3/6]${GRAY} ISO found. Skipping download.${NC}"
+fi
 
-    echo -e "${ORANGE}[2/4]${GRAY} Setting up VNC...${NC}"
-    if [ ! -d "novnc" ]; then
-        git clone --depth 1 https://github.com/novnc/noVNC.git novnc > /dev/null 2>&1
-        git clone --depth 1 https://github.com/novnc/websockify novnc/utils/websockify > /dev/null 2>&1
-    fi
+# 4. Create Disk
+if [ ! -f "$DISK_NAME" ]; then
+    echo -e "${ORANGE}[*]${GRAY} Creating Storage Disk (100GB)...${NC}"
+    qemu-img create -f qcow2 "$DISK_NAME" 100G > /dev/null
+fi
 
-    echo -e "${ORANGE}[3/4]${GRAY} Checking ISO (2025.3)...${NC}"
-    if [ ! -f "$ISO_NAME" ]; then
-        wget --show-progress -O "$ISO_NAME" "$ISO_LINK"
-    else
-        echo -e "${GREEN}[✓] ISO Ready.${NC}"
-    fi
+# 5. Start VM (USB MOUSE MODE - Fixes Drag Glitch)
+echo -e "${ORANGE}[4/6]${GRAY} Booting Virtual Machine...${NC}"
+qemu-system-x86_64 \
+  -m 4G \
+  -smp 2 \
+  -usb -device usb-mouse \
+  -hda "$DISK_NAME" \
+  -cdrom "$ISO_NAME" \
+  -boot d \
+  -vnc :0 \
+  -net nic,model=virtio -net user \
+  -daemonize
 
-    echo -e "${ORANGE}[4/4]${GRAY} Checking Storage (100GB)...${NC}"
-    if [ ! -f "$DISK_NAME" ]; then
-        qemu-img create -f qcow2 "$DISK_NAME" 100G > /dev/null
-    else
-        echo -e "${GREEN}[✓] Disk Ready.${NC}"
-    fi
-    
-    echo ""
-    echo -e "${GREEN}✅ Setup Done! Press Enter.${NC}"
-    read
-}
+# Start noVNC
+echo -e "${ORANGE}[5/6]${GRAY} Starting Display Server...${NC}"
+./novnc/utils/novnc_proxy --vnc localhost:5900 --listen 6080 > /dev/null 2>&1 &
 
-function start_vm() {
-    header
-    if [ ! -f "$ISO_NAME" ]; then
-        echo -e "${RED}❌ Error: Please run Option 1 (Create VM) first.${NC}"
-        read
-        return
-    fi
+# 6. Public URL
+echo -e "${ORANGE}[6/6]${GRAY} Generating Public Link (Please Wait)...${NC}"
 
-    echo -e "${ORANGE}[*]${GRAY} Cleaning old processes...${NC}"
-    stop_vm > /dev/null 2>&1
+rm -f tunnel.log
+nohup ssh -q -p 443 -R0:localhost:6080 -L4300:localhost:4300 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 free.pinggy.io > tunnel.log 2>&1 &
 
-    echo -e "${ORANGE}[*]${GRAY} Booting Kali (2GB RAM Mode)...${NC}"
-    
-    # --- CRASH FIX: RAM reduced to 2G ---
-    # Mouse: USB Mouse added for smooth trackpad feel without glitches
-    qemu-system-x86_64 \
-      -m 2G \
-      -smp 2 \
-      -usb -device usb-mouse \
-      -hda "$DISK_NAME" \
-      -cdrom "$ISO_NAME" \
-      -boot d \
-      -vnc :0 \
-      -net nic,model=virtio -net user \
-      -daemonize
+SSH_PID=$!
+while ! grep -q "https://" tunnel.log; do
+    sleep 1
+done
 
-    echo -e "${ORANGE}[*]${GRAY} Starting VNC...${NC}"
-    ./novnc/utils/novnc_proxy --vnc localhost:5900 --listen 6080 > /dev/null 2>&1 &
+PUBLIC_URL=$(grep -o "https://[^ ]*.pinggy.link" tunnel.log | head -n 1)
 
-    echo -e "${ORANGE}[*]${GRAY} Generating Link...${NC}"
-    nohup ssh -q -p 443 -R0:localhost:6080 -L4300:localhost:4300 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 free.pinggy.io > tunnel.log 2>&1 &
+# --- FINAL CLEAN SCREEN ---
+clear
+echo -e "${GRAY}========================================================${NC}"
+echo -e "${ORANGE}      ✅  KALI LINUX STARTED! ${NC}"
+echo -e "${GRAY}========================================================${NC}"
+echo ""
+echo -e "${GRAY} 🔗 ACCESS URL:  ${ORANGE}$PUBLIC_URL${NC}"
+echo ""
+echo -e "${GRAY}========================================================${NC}"
+echo -e "${GRAY} ⏳ URL Expires in: ${ORANGE}60 Minutes${NC}"
+echo -e "${GRAY} 🛑 Stop Machine: ${ORANGE}Press Ctrl + C${NC}"
+echo -e "${GRAY} 🔄 TRICK: ${ORANGE}Run This Script Again To Generate a New URL${NC}"
+echo -e "${GRAY}========================================================${NC}"
 
-    echo -e "${GRAY}    (Waiting for URL...)${NC}"
-    count=0
-    while ! grep -q "https://" tunnel.log; do
-        sleep 1
-        ((count++))
-        if [ $count -ge 20 ]; then
-             echo -e "${RED}⚠️  Retrying Tunnel...${NC}"
-             pkill -f ssh
-             nohup ssh -q -p 443 -R0:localhost:6080 -L4300:localhost:4300 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 free.pinggy.io > tunnel.log 2>&1 &
-             count=0
-        fi
-    done
-
-    PUBLIC_URL=$(grep -o "https://[^ ]*.pinggy.link" tunnel.log | head -n 1)
-
-    clear
-    echo -e "${GRAY}========================================================${NC}"
-    echo -e "${GREEN}      ✅  VM RUNNING (2GB RAM - SAFE)  ${NC}"
-    echo -e "${GRAY}========================================================${NC}"
-    echo ""
-    echo -e "${GRAY} 🔗 URL:  ${ORANGE}$PUBLIC_URL${NC}"
-    echo ""
-    echo -e "${GRAY}========================================================${NC}"
-    echo -e "${GRAY} 🔄 TRICK: ${ORANGE}Run 'Restart' if link dies.${NC}"
-    echo -e "${GRAY}========================================================${NC}"
-    echo ""
-    echo -e "${ORANGE}Press Enter to return to Menu.${NC}"
-    read
-}
-
-# --- MENU ---
-while true; do
-    header
-    echo -e "${ORANGE} 1.${GRAY} Create Kali VM"
-    echo -e "${ORANGE} 2.${GRAY} Start VM (Get Link)"
-    echo -e "${ORANGE} 3.${GRAY} Restart VM"
-    echo -e "${ORANGE} 4.${GRAY} Stop VM (Kill All)"
-    echo -e "${ORANGE} 5.${GRAY} Exit Menu Only"
-    echo -e "${GRAY}------------------------------------------------${NC}"
-    echo -n -e "${ORANGE}Select: ${NC}"
-    read choice
-
-    case $choice in
-        1) create_vm ;;
-        2) start_vm ;;
-        3) stop_vm; start_vm ;;
-        4) stop_vm; read ;;
-        5) exit 0 ;;
-        *) echo "Invalid"; sleep 1 ;;
-    esac
+# Silent Loop
+while kill -0 $SSH_PID 2>/dev/null; do
+    sleep 5
 done
